@@ -1,0 +1,1855 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PARI — Фитнес Ставки</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --bg: #0a0a0a;
+  --bg2: #111111;
+  --bg3: #1a1a1a;
+  --card: #161616;
+  --card2: #1e1e1e;
+  --green: #00ff6a;
+  --green2: #00cc55;
+  --green-dim: rgba(0,255,106,0.12);
+  --red: #ff3b5c;
+  --red-dim: rgba(255,59,92,0.12);
+  --gold: #ffd700;
+  --text: #ffffff;
+  --text2: #aaaaaa;
+  --text3: #555555;
+  --border: rgba(255,255,255,0.07);
+  --glass: rgba(255,255,255,0.06);
+  --glass-border: rgba(255,255,255,0.12);
+  --radius: 20px;
+  --radius-sm: 12px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  font-family: 'Manrope', sans-serif;
+  background: #050505;
+  color: var(--text);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+#app {
+  width: 390px;
+  height: 844px;
+  background: var(--bg);
+  position: relative;
+  overflow: hidden;
+  border-radius: 40px;
+  box-shadow: 0 40px 120px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.06);
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  animation: fadeSlide .3s ease;
+}
+.screen.active { display: flex; }
+
+@keyframes fadeSlide {
+  from { opacity:0; transform: translateX(18px); }
+  to { opacity:1; transform: translateX(0); }
+}
+@keyframes fadeIn {
+  from { opacity:0; transform: translateY(14px); }
+  to { opacity:1; transform: translateY(0); }
+}
+@keyframes pulse {
+  0%,100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+@keyframes spinGreen {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes confettiFall {
+  from { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+  to { transform: translateY(900px) rotate(720deg); opacity: 0; }
+}
+@keyframes loadingBar { to { width: 100%; } }
+@keyframes toastIn {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes sheetUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes glowPulse {
+  0%,100% { box-shadow: 0 0 20px rgba(0,255,106,0.3); }
+  50% { box-shadow: 0 0 40px rgba(0,255,106,0.6); }
+}
+
+/* SCROLLABLE */
+.scroll-content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 90px;
+}
+.scroll-content::-webkit-scrollbar { display: none; }
+
+/* BOTTOM NAV */
+.bottom-nav {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 80px;
+  background: rgba(10,10,10,0.97);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 4px 10px;
+  z-index: 100;
+}
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  padding: 8px 10px;
+  border-radius: 14px;
+  transition: all .2s;
+  position: relative;
+  flex: 1;
+}
+.nav-item.active { background: var(--green-dim); }
+.nav-item svg { width: 20px; height: 20px; stroke: var(--text3); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.nav-item.active svg { stroke: var(--green); }
+.nav-item span { font-size: 9px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.3px; }
+.nav-item.active span { color: var(--green); }
+.nav-badge {
+  position: absolute; top: 4px; right: 8px;
+  background: var(--red); color: #fff;
+  font-size: 9px; font-weight: 800;
+  width: 15px; height: 15px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* BUTTONS */
+.btn-primary {
+  width: 100%; padding: 18px;
+  background: var(--green); color: #000;
+  border: none; border-radius: var(--radius);
+  font-family: 'Manrope', sans-serif;
+  font-size: 16px; font-weight: 800;
+  cursor: pointer; transition: all .2s;
+  letter-spacing: 0.3px;
+}
+.btn-primary:active { transform: scale(.97); background: var(--green2); }
+
+.back-btn {
+  width: 38px; height: 38px;
+  background: var(--bg3); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; border: none; color: var(--text);
+  font-size: 18px; transition: all .2s; flex-shrink: 0;
+}
+.back-btn:active { transform: scale(.9); }
+
+/* PAGE HEADER */
+.page-header {
+  padding: 14px 20px 16px;
+  display: flex; align-items: center; gap: 12px;
+  flex-shrink: 0;
+}
+.page-title { font-size: 20px; font-weight: 800; }
+
+/* SECTION TITLE */
+.section-title {
+  font-size: 17px; font-weight: 800;
+  margin-bottom: 12px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.section-see-all { font-size: 13px; color: var(--green); font-weight: 600; cursor: pointer; }
+
+/* LOADING */
+.loading-overlay {
+  position: absolute; inset: 0;
+  background: var(--bg); z-index: 500;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 20px;
+}
+.loading-logo { font-family: 'Bebas Neue', sans-serif; font-size: 56px; letter-spacing: 4px; }
+.loading-logo .p { color: var(--green); }
+.loading-bar-wrap { width: 160px; height: 3px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+.loading-bar { height: 100%; background: var(--green); border-radius: 2px; animation: loadingBar 2s ease forwards; width: 0; }
+.loading-tagline { font-size: 13px; color: var(--text3); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+
+/* ==================== ONBOARDING ==================== */
+#onboarding { background: var(--bg); }
+.onboard-slides { flex: 1; position: relative; overflow: hidden; }
+.onboard-slide {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 32px 28px; text-align: center;
+  opacity: 0; transform: translateX(100%);
+  transition: all .45s cubic-bezier(.4,0,.2,1);
+}
+.onboard-slide.active { opacity: 1; transform: translateX(0); }
+.onboard-slide.prev { opacity: 0; transform: translateX(-100%); }
+
+.onboard-visual {
+  width: 220px; height: 220px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 90px;
+  margin-bottom: 28px;
+  position: relative;
+  animation: pulse 2.5s infinite;
+}
+.onboard-visual::after {
+  content: '';
+  position: absolute; inset: -16px;
+  border-radius: 50%;
+  border: 1px solid rgba(0,255,106,0.15);
+}
+.onboard-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 46px; line-height: 1;
+  color: var(--text); margin-bottom: 16px; letter-spacing: 1px;
+}
+.onboard-title span { color: var(--green); }
+.onboard-desc { font-size: 15px; color: var(--text2); line-height: 1.65; max-width: 310px; }
+
+/* Feature pills on slide */
+.feature-pills { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 20px; }
+.feature-pill {
+  padding: 6px 14px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  font-size: 12px; font-weight: 600; color: var(--text2);
+  backdrop-filter: blur(10px);
+}
+.feature-pill.green { border-color: rgba(0,255,106,0.3); color: var(--green); }
+
+.onboard-dots { display: flex; gap: 8px; justify-content: center; padding: 20px; }
+.onboard-dot {
+  width: 8px; height: 8px; border-radius: 4px;
+  background: var(--text3); transition: all .3s;
+}
+.onboard-dot.active { width: 24px; background: var(--green); }
+.onboard-btn-wrap { padding: 0 28px 44px; }
+
+/* ==================== DASHBOARD ==================== */
+#dashboard .scroll-content { padding: 0 20px 90px; }
+.dash-header {
+  padding: 14px 20px 14px;
+  display: flex; justify-content: space-between; align-items: center;
+  flex-shrink: 0;
+}
+.dash-greeting { font-size: 12px; color: var(--text2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.dash-name { font-size: 20px; font-weight: 800; }
+.dash-avatar {
+  width: 42px; height: 42px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--green), #00aaff);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; cursor: pointer; position: relative;
+}
+.avatar-ring { position: absolute; inset: -3px; border-radius: 50%; border: 2px solid var(--green); animation: glowPulse 2s infinite; }
+
+/* BALANCE CARD */
+.balance-card {
+  background: linear-gradient(135deg, #0f2010, #091a0c);
+  border: 1px solid rgba(0,255,106,0.2);
+  border-radius: 22px; padding: 22px; margin-bottom: 14px;
+  position: relative; overflow: hidden;
+}
+.balance-card::before {
+  content: ''; position: absolute; top: -50px; right: -50px;
+  width: 160px; height: 160px;
+  background: radial-gradient(circle, rgba(0,255,106,0.12), transparent 70%);
+  border-radius: 50%;
+}
+.balance-label { font-size: 11px; color: rgba(0,255,106,0.7); font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; }
+.balance-amount { font-family: 'Bebas Neue', sans-serif; font-size: 46px; color: var(--green); line-height: 1; margin-bottom: 14px; }
+.balance-stats { display: flex; gap: 20px; }
+.balance-stat-label { font-size: 10px; color: var(--text3); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+.balance-stat-val { font-size: 15px; font-weight: 800; }
+.balance-stat-val.up { color: var(--green); }
+.balance-stat-val.down { color: var(--red); }
+
+/* STREAK */
+.streak-row { display: flex; gap: 6px; margin-bottom: 14px; overflow-x: auto; }
+.streak-row::-webkit-scrollbar { display:none; }
+.streak-day { flex-shrink: 0; width: 42px; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.streak-circle {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--bg3); border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; transition: all .2s;
+}
+.streak-circle.done { background: var(--green); border-color: var(--green); color: #000; font-weight: 800; }
+.streak-circle.today { border-color: var(--green); box-shadow: 0 0 12px rgba(0,255,106,0.35); }
+.streak-day-label { font-size: 9px; color: var(--text3); font-weight: 700; text-transform: uppercase; }
+
+/* QUICK START */
+.quick-start {
+  background: var(--green); border-radius: var(--radius);
+  padding: 18px 20px; margin-bottom: 18px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; transition: all .2s;
+}
+.quick-start:active { transform: scale(.98); background: var(--green2); }
+.qs-title { font-family: 'Bebas Neue', sans-serif; font-size: 26px; color: #000; line-height: 1; }
+.qs-sub { font-size: 12px; color: rgba(0,0,0,0.55); font-weight: 700; }
+.qs-icon { font-size: 36px; }
+
+/* BATTLE CARD */
+.battle-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px; margin-bottom: 10px;
+  cursor: pointer; transition: all .2s; position: relative; overflow: hidden;
+}
+.battle-card:active { transform: scale(.98); }
+.battle-card::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px; border-radius: 3px 0 0 3px;
+}
+.battle-card.active-battle::before { background: var(--green); }
+.battle-card.pending-battle::before { background: var(--gold); }
+.battle-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.battle-card-title { font-size: 15px; font-weight: 700; }
+.battle-card-badge {
+  padding: 3px 10px; border-radius: 20px;
+  font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.badge-active { background: var(--green-dim); color: var(--green); }
+.badge-pending { background: rgba(255,215,0,0.15); color: var(--gold); }
+.battle-card-players { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.player-mini { display: flex; align-items: center; gap: 6px; }
+.player-mini-avatar { width: 26px; height: 26px; border-radius: 50%; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+.player-mini-name { font-size: 12px; color: var(--text2); }
+.vs-mini { font-size: 10px; font-weight: 800; color: var(--text3); }
+.progress-bar { height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden; margin: 4px 0; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--green2), var(--green)); border-radius: 3px; transition: width .5s ease; }
+.progress-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text3); }
+.battle-card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+.battle-stake { font-size: 16px; font-weight: 800; color: var(--green); }
+.battle-time { font-size: 11px; color: var(--text3); }
+
+/* ==================== FRIENDS ==================== */
+#friends .scroll-content { padding: 0 20px 90px; }
+
+.friends-search {
+  margin-bottom: 20px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 16px;
+  display: flex; align-items: center; gap: 10px;
+}
+.friends-search input {
+  flex: 1; background: none; border: none; outline: none;
+  color: var(--text); font-family: 'Manrope', sans-serif; font-size: 14px;
+}
+.friends-search input::placeholder { color: var(--text3); }
+
+/* GLASS CARDS */
+.glass-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.glass-card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 18px; padding: 20px 16px;
+  text-align: center; cursor: pointer;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: all .25s;
+  position: relative; overflow: hidden;
+}
+.glass-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+}
+.glass-card:active { transform: scale(.96); background: rgba(255,255,255,0.1); }
+.glass-card.green-tint { border-color: rgba(0,255,106,0.25); background: rgba(0,255,106,0.06); }
+.glass-card.gold-tint { border-color: rgba(255,215,0,0.25); background: rgba(255,215,0,0.06); }
+.glass-card.red-tint { border-color: rgba(255,59,92,0.25); background: rgba(255,59,92,0.06); }
+.glass-card.blue-tint { border-color: rgba(0,170,255,0.25); background: rgba(0,170,255,0.06); }
+.glass-card-icon { font-size: 32px; margin-bottom: 10px; }
+.glass-card-label { font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+.glass-card-sub { font-size: 11px; color: var(--text2); }
+
+/* QR MODAL CONTENT */
+.qr-display {
+  width: 180px; height: 180px;
+  background: #fff; border-radius: 16px;
+  margin: 0 auto 16px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+}
+.qr-inner { width: 150px; height: 150px; }
+.qr-logo-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.qr-logo-badge {
+  background: var(--green); color: #000;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px; padding: 4px 10px; border-radius: 8px;
+  letter-spacing: 1px;
+}
+
+/* FRIEND CARD */
+.friend-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px;
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 8px; transition: all .2s; cursor: pointer;
+}
+.friend-card:active { transform: scale(.98); }
+.friend-avatar { width: 46px; height: 46px; border-radius: 50%; font-size: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.friend-info { flex: 1; }
+.friend-name { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+.friend-meta { font-size: 11px; color: var(--text2); }
+.friend-rating { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--green); }
+.friend-challenge-btn {
+  padding: 8px 14px; background: var(--green-dim);
+  border: 1px solid rgba(0,255,106,0.3);
+  border-radius: 10px; color: var(--green);
+  font-size: 12px; font-weight: 800; cursor: pointer; transition: all .2s;
+}
+.friend-challenge-btn:active { background: var(--green); color: #000; }
+
+/* INVITE BANNER */
+.invite-banner {
+  background: linear-gradient(135deg, rgba(0,255,106,0.08), rgba(0,170,255,0.08));
+  border: 1px solid rgba(0,255,106,0.2);
+  border-radius: var(--radius); padding: 20px;
+  margin-bottom: 20px; display: flex; align-items: center; gap: 16px;
+  cursor: pointer; transition: all .2s;
+}
+.invite-banner:active { transform: scale(.98); }
+.invite-banner-icon { font-size: 40px; }
+.invite-banner-text {}
+.invite-banner-title { font-size: 15px; font-weight: 800; margin-bottom: 4px; }
+.invite-banner-sub { font-size: 12px; color: var(--text2); line-height: 1.5; }
+.invite-banner-bonus { font-size: 14px; font-weight: 700; color: var(--green); margin-top: 6px; }
+
+/* ==================== TRAINING (Подготовка) ==================== */
+#training .scroll-content { padding: 0 20px 90px; }
+
+.training-hero {
+  margin-bottom: 20px; position: relative;
+  background: linear-gradient(135deg, #0d1a0d, #1a0d20);
+  border-radius: 22px; padding: 24px; overflow: hidden;
+}
+.training-hero::before {
+  content: '';
+  position: absolute; top: -40px; right: -40px;
+  width: 180px; height: 180px;
+  background: radial-gradient(circle, rgba(150,50,255,0.2), transparent 70%);
+  border-radius: 50%;
+}
+.training-hero-title { font-family: 'Bebas Neue', sans-serif; font-size: 38px; line-height: 1; margin-bottom: 8px; }
+.training-hero-sub { font-size: 14px; color: var(--text2); margin-bottom: 18px; line-height: 1.5; }
+.training-stats-row { display: flex; gap: 16px; }
+.training-stat { text-align: center; }
+.training-stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 28px; color: var(--green); line-height: 1; }
+.training-stat-label { font-size: 10px; color: var(--text3); font-weight: 700; text-transform: uppercase; }
+
+.course-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+  margin-bottom: 12px; cursor: pointer; transition: all .2s;
+}
+.course-card:active { transform: scale(.99); }
+.course-card-img {
+  height: 100px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 48px; position: relative;
+}
+.course-card-img.purple { background: linear-gradient(135deg, #2d1060, #4a0080); }
+.course-card-img.orange { background: linear-gradient(135deg, #3d1500, #6b2e00); }
+.course-card-img.blue { background: linear-gradient(135deg, #001a40, #003380); }
+.course-card-img.green { background: linear-gradient(135deg, #001a0d, #003320); }
+.course-locked-overlay {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.55); backdrop-filter: blur(2px);
+  display: flex; align-items: center; justify-content: center; font-size: 28px;
+}
+.course-card-body { padding: 14px 16px; }
+.course-badge {
+  display: inline-block; padding: 3px 10px; border-radius: 20px;
+  font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.badge-free { background: var(--green-dim); color: var(--green); }
+.badge-paid { background: rgba(255,215,0,0.15); color: var(--gold); }
+.badge-premium { background: rgba(150,50,255,0.15); color: #b060ff; }
+.course-title { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
+.course-desc { font-size: 12px; color: var(--text2); margin-bottom: 10px; line-height: 1.5; }
+.course-footer { display: flex; align-items: center; justify-content: space-between; }
+.course-meta { font-size: 11px; color: var(--text3); }
+.course-price { font-size: 16px; font-weight: 800; }
+.course-price.free { color: var(--green); }
+.course-price.paid { color: var(--gold); }
+
+.battle-link-card {
+  background: linear-gradient(135deg, rgba(150,50,255,0.15), rgba(255,60,92,0.15));
+  border: 1px solid rgba(150,50,255,0.3);
+  border-radius: var(--radius); padding: 16px;
+  margin-bottom: 20px; display: flex; align-items: center; gap: 12px;
+  cursor: pointer;
+}
+.battle-link-icon { font-size: 32px; }
+.battle-link-info {}
+.battle-link-title { font-size: 14px; font-weight: 800; margin-bottom: 4px; }
+.battle-link-sub { font-size: 12px; color: var(--text2); }
+
+/* ==================== CREATE BATTLE ==================== */
+#create-battle .scroll-content { padding: 0 20px 90px; }
+.form-section { margin-bottom: 22px; }
+.form-label { font-size: 11px; color: var(--text2); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+.activity-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.activity-card {
+  background: var(--card); border: 2px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 8px;
+  cursor: pointer; transition: all .2s; text-align: center;
+}
+.activity-card:active { transform: scale(.96); }
+.activity-card.selected { border-color: var(--green); background: var(--green-dim); }
+.activity-icon { font-size: 26px; margin-bottom: 6px; }
+.activity-name { font-size: 11px; font-weight: 700; }
+.chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip {
+  padding: 9px 16px; background: var(--card);
+  border: 1.5px solid var(--border); border-radius: 20px;
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s; color: var(--text2);
+}
+.chip:active { transform: scale(.95); }
+.chip.selected { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+.stake-input-wrap {
+  background: var(--card); border: 2px solid var(--border);
+  border-radius: var(--radius-sm); padding: 18px;
+  display: flex; align-items: center; gap: 10px; transition: border-color .2s;
+}
+.stake-input-wrap:focus-within { border-color: var(--green); }
+.stake-currency { font-family: 'Bebas Neue', sans-serif; font-size: 26px; color: var(--green); }
+.stake-input {
+  flex: 1; background: none; border: none; outline: none;
+  font-family: 'Bebas Neue', sans-serif; font-size: 36px; color: var(--text); width: 100%;
+}
+.stake-presets { display: flex; gap: 8px; margin-top: 8px; }
+.stake-preset {
+  flex: 1; padding: 9px 4px; background: var(--card);
+  border: 1.5px solid var(--border); border-radius: 10px;
+  text-align: center; font-size: 12px; font-weight: 700;
+  cursor: pointer; color: var(--text2); transition: all .2s;
+}
+.stake-preset:active { transform: scale(.95); background: var(--green-dim); border-color: var(--green); color: var(--green); }
+.type-toggle { display: flex; gap: 8px; }
+.type-btn {
+  flex: 1; padding: 14px; background: var(--card);
+  border: 2px solid var(--border); border-radius: var(--radius-sm);
+  text-align: center; cursor: pointer; transition: all .2s;
+}
+.type-btn.selected { border-color: var(--green); background: var(--green-dim); }
+.type-btn-icon { font-size: 22px; margin-bottom: 6px; }
+.type-btn-label { font-size: 12px; font-weight: 700; color: var(--text2); }
+.type-btn.selected .type-btn-label { color: var(--green); }
+
+/* ==================== FIND OPPONENT ==================== */
+#find-opponent .scroll-content { padding: 0 20px 90px; }
+.search-summary {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px;
+  display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+}
+.ss-icon { font-size: 22px; }
+.ss-title { font-size: 14px; font-weight: 700; }
+.ss-sub { font-size: 11px; color: var(--text2); }
+.ss-stake { font-size: 18px; font-weight: 800; color: var(--green); margin-left: auto; }
+.searching-animation { padding: 32px 20px; text-align: center; }
+.radar {
+  width: 140px; height: 140px; border-radius: 50%;
+  border: 2px solid rgba(0,255,106,0.25);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 28px; position: relative;
+}
+.radar::before, .radar::after { content: ''; position: absolute; border-radius: 50%; border: 1px solid rgba(0,255,106,0.15); }
+.radar::before { width: 100px; height: 100px; }
+.radar::after { width: 60px; height: 60px; }
+.radar-sweep { position: absolute; width: 50%; height: 2px; background: linear-gradient(90deg, var(--green), transparent); transform-origin: right center; animation: spinGreen 2s linear infinite; top: 50%; right: 50%; }
+.radar-dot { width: 14px; height: 14px; background: var(--green); border-radius: 50%; box-shadow: 0 0 16px var(--green); }
+.searching-title { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+.searching-sub { font-size: 13px; color: var(--text2); margin-bottom: 28px; }
+.opponent-card {
+  background: var(--card); border: 1.5px solid var(--border);
+  border-radius: var(--radius); padding: 16px;
+  margin-bottom: 10px; display: flex; align-items: center; gap: 14px;
+  cursor: pointer; transition: all .2s; animation: fadeIn .4s ease both;
+}
+.opponent-card:active { transform: scale(.98); border-color: var(--green); }
+.opp-avatar { width: 50px; height: 50px; border-radius: 50%; font-size: 22px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.opp-info { flex: 1; }
+.opp-name { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+.opp-meta { font-size: 11px; color: var(--text2); }
+.opp-rating-val { font-family: 'Bebas Neue', sans-serif; font-size: 24px; color: var(--green); }
+.opp-rating-label { font-size: 9px; color: var(--text3); font-weight: 700; text-transform: uppercase; }
+
+/* ==================== BATTLE SCREEN ==================== */
+.battle-header { padding: 14px 20px; text-align: center; flex-shrink: 0; }
+.battle-type-label {
+  display: inline-block; padding: 5px 14px;
+  background: var(--red-dim); border-radius: 20px;
+  color: var(--red); font-size: 11px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; animation: pulse 1s infinite;
+}
+.battle-condition { font-size: 15px; color: var(--text2); margin-bottom: 3px; }
+.battle-stake-big { font-family: 'Bebas Neue', sans-serif; font-size: 34px; color: var(--green); }
+.battle-arena { padding: 16px 20px; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.players-vs { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 14px; margin-bottom: 28px; }
+.arena-player { text-align: center; }
+.arena-avatar { width: 68px; height: 68px; border-radius: 50%; font-size: 30px; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; position: relative; }
+.arena-avatar .glow { position: absolute; inset: -4px; border-radius: 50%; border: 2px solid; opacity: 0.5; }
+.arena-player-name { font-size: 13px; font-weight: 700; }
+.arena-player-stat { font-family: 'Bebas Neue', sans-serif; font-size: 30px; color: var(--green); line-height: 1; }
+.arena-player-sublabel { font-size: 10px; color: var(--text3); }
+.vs-badge { font-family: 'Bebas Neue', sans-serif; font-size: 24px; color: var(--text3); background: var(--bg3); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.battle-progress-section { margin-bottom: 20px; }
+.bp-label { font-size: 10px; color: var(--text3); font-weight: 700; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+.bp-bar { height: 8px; background: var(--bg3); border-radius: 4px; overflow: hidden; margin-bottom: 4px; position: relative; }
+.bp-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--green2), var(--green)); transition: width .8s cubic-bezier(.4,0,.2,1); position: relative; }
+.bp-fill::after { content: ''; position: absolute; right: -1px; top: -3px; width: 14px; height: 14px; background: var(--green); border-radius: 50%; box-shadow: 0 0 8px var(--green); }
+.bp-fill.opp-fill { background: linear-gradient(90deg, #ff3b5c, #ff6b35); }
+.bp-fill.opp-fill::after { background: var(--red); box-shadow: 0 0 8px var(--red); }
+.battle-timer { text-align: center; margin-bottom: 20px; }
+.timer-label { font-size: 10px; color: var(--text3); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+.timer-value { font-family: 'Bebas Neue', sans-serif; font-size: 52px; color: var(--text); line-height: 1; letter-spacing: 2px; }
+.battle-actions { padding: 0 20px 20px; display: flex; gap: 10px; flex-shrink: 0; }
+.btn-battle-start { flex: 1; padding: 16px; background: var(--green); color: #000; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 800; cursor: pointer; transition: all .2s; }
+.btn-battle-start:active { transform: scale(.97); }
+.btn-battle-end { padding: 16px 18px; background: var(--bg3); color: var(--text); border: 1.5px solid var(--border); border-radius: var(--radius); font-size: 13px; font-weight: 700; cursor: pointer; transition: all .2s; }
+
+/* ==================== RESULT ==================== */
+#result-screen { background: var(--bg); }
+.result-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 28px; text-align: center; }
+.result-emoji { font-size: 72px; margin-bottom: 20px; }
+.result-title { font-family: 'Bebas Neue', sans-serif; font-size: 60px; line-height: 1; margin-bottom: 10px; }
+.result-title.win { color: var(--green); }
+.result-title.lose { color: var(--red); }
+.result-sub { font-size: 15px; color: var(--text2); margin-bottom: 28px; }
+.result-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; width: 100%; margin-bottom: 20px; }
+.result-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.result-row:last-child { border-bottom: none; }
+.result-row-label { font-size: 13px; color: var(--text2); }
+.result-row-val { font-size: 15px; font-weight: 700; }
+.result-row-val.green { color: var(--green); }
+.result-row-val.red { color: var(--red); }
+.confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.confetti-piece { position: absolute; width: 8px; height: 8px; border-radius: 2px; animation: confettiFall 3s ease-in forwards; }
+
+/* ==================== CELEBRITIES ==================== */
+#celebrities .scroll-content { padding: 0 20px 90px; }
+.celeb-featured { background: linear-gradient(135deg, #1a1030, #2a0a1a); border: 1px solid rgba(255,107,149,0.3); border-radius: 22px; padding: 22px; margin-bottom: 14px; position: relative; overflow: hidden; }
+.celeb-featured::before { content: ''; position: absolute; top: -30px; right: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(255,107,149,0.18), transparent); border-radius: 50%; }
+.featured-badge { display: inline-block; padding: 3px 12px; background: rgba(255,215,0,0.15); border-radius: 20px; color: var(--gold); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+.celeb-featured-top { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.celeb-avatar-big { width: 64px; height: 64px; border-radius: 50%; font-size: 28px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, rgba(255,107,149,.4), rgba(100,50,200,.4)); border: 2px solid rgba(255,107,149,0.5); flex-shrink: 0; }
+.celeb-name { font-size: 20px; font-weight: 800; margin-bottom: 3px; }
+.celeb-cat { font-size: 12px; color: var(--text2); }
+.celeb-record { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.3); border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; }
+.celeb-record-label { font-size: 10px; color: var(--text3); font-weight: 700; }
+.celeb-record-val { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--gold); }
+.celeb-bank { font-size: 13px; color: var(--text2); margin-bottom: 14px; }
+.celeb-bank span { color: var(--green); font-weight: 700; }
+.btn-challenge { width: 100%; padding: 15px; background: linear-gradient(135deg, rgba(255,107,149,0.25), rgba(100,50,200,0.25)); border: 1.5px solid rgba(255,107,149,0.4); border-radius: var(--radius-sm); color: #fff; font-size: 14px; font-weight: 800; cursor: pointer; transition: all .2s; }
+.btn-challenge:active { transform: scale(.97); }
+.celeb-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all .2s; }
+.celeb-card:active { transform: scale(.98); }
+.celeb-card-avatar { width: 48px; height: 48px; border-radius: 50%; font-size: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.celeb-card-name { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+.celeb-card-challenge { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+.celeb-card-prize { font-size: 14px; font-weight: 700; color: var(--green); }
+.celeb-card-participants { font-size: 10px; color: var(--text3); }
+
+/* ==================== LEADERBOARD ==================== */
+#leaderboard .scroll-content { padding: 0 20px 90px; }
+.lb-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; }
+.lb-tabs::-webkit-scrollbar { display: none; }
+.lb-tab { flex-shrink: 0; padding: 7px 16px; background: var(--card); border: 1.5px solid var(--border); border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--text2); transition: all .2s; }
+.lb-tab.active { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+.lb-podium { display: flex; align-items: flex-end; justify-content: center; gap: 8px; padding: 20px; background: linear-gradient(180deg, var(--card) 0%, transparent 100%); border-radius: var(--radius); margin-bottom: 14px; }
+.podium-item { text-align: center; }
+.podium-item:nth-child(1) { order: 2; }
+.podium-item:nth-child(2) { order: 1; }
+.podium-item:nth-child(3) { order: 3; }
+.podium-avatar { border-radius: 50%; font-size: 22px; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px; }
+.podium-item:nth-child(1) .podium-avatar { width: 60px; height: 60px; border: 3px solid var(--gold); }
+.podium-item:nth-child(2) .podium-avatar { width: 50px; height: 50px; border: 2px solid #aaa; }
+.podium-item:nth-child(3) .podium-avatar { width: 46px; height: 46px; border: 2px solid #cd7f32; }
+.podium-name { font-size: 11px; font-weight: 700; margin-bottom: 2px; }
+.podium-score { font-family: 'Bebas Neue', sans-serif; font-size: 16px; }
+.podium-item:nth-child(1) .podium-score { color: var(--gold); }
+.podium-medal { font-size: 18px; }
+.podium-block { height: 8px; border-radius: 4px 4px 0 0; width: 56px; margin: 6px auto 0; }
+.podium-item:nth-child(1) .podium-block { height: 36px; background: var(--gold); }
+.podium-item:nth-child(2) .podium-block { height: 24px; background: #aaa; }
+.podium-item:nth-child(3) .podium-block { height: 18px; background: #cd7f32; }
+.lb-row { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.lb-row.me { border-color: var(--green); background: var(--green-dim); }
+.lb-rank { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--text3); width: 24px; }
+.lb-avatar { width: 38px; height: 38px; border-radius: 50%; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.lb-name { font-size: 13px; font-weight: 700; }
+.lb-meta { font-size: 10px; color: var(--text2); }
+.lb-points { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--green); }
+
+/* ==================== PROFILE ==================== */
+#profile .scroll-content { padding: 0 20px 90px; }
+.profile-hero { padding: 16px 20px; text-align: center; flex-shrink: 0; }
+.profile-avatar-wrap { position: relative; display: inline-block; margin-bottom: 14px; }
+.profile-avatar-big { width: 84px; height: 84px; border-radius: 50%; background: linear-gradient(135deg, var(--green), #00aaff); font-size: 38px; display: flex; align-items: center; justify-content: center; }
+.profile-level-badge { position: absolute; bottom: -3px; right: -3px; background: var(--gold); color: #000; width: 26px; height: 26px; border-radius: 50%; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 3px solid var(--bg); }
+.profile-name { font-size: 22px; font-weight: 800; margin-bottom: 3px; }
+.profile-handle { font-size: 13px; color: var(--text2); margin-bottom: 12px; }
+.profile-league { display: inline-flex; align-items: center; gap: 6px; padding: 7px 18px; background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 20px; font-size: 12px; font-weight: 700; color: var(--gold); }
+.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+.stat-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; text-align: center; }
+.stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 30px; margin-bottom: 3px; }
+.stat-val.green { color: var(--green); }
+.stat-val.red { color: var(--red); }
+.stat-val.gold { color: var(--gold); }
+.stat-label { font-size: 10px; color: var(--text3); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+.xp-section { margin-bottom: 16px; }
+.xp-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.xp-label { font-size: 13px; font-weight: 700; }
+.xp-val { font-size: 12px; color: var(--text2); }
+.xp-bar { height: 7px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
+.xp-fill { height: 100%; background: linear-gradient(90deg, var(--gold), #ff9500); border-radius: 4px; width: 68%; }
+.achievements-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+.achievement { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 6px; text-align: center; }
+.achievement.unlocked { border-color: rgba(255,215,0,0.35); background: rgba(255,215,0,0.04); }
+.achievement-icon { font-size: 22px; margin-bottom: 3px; }
+.achievement.locked .achievement-icon { filter: grayscale(1) opacity(0.3); }
+.achievement-name { font-size: 9px; color: var(--text3); font-weight: 700; text-transform: uppercase; }
+
+/* LOGO */
+.logo { font-family: 'Bebas Neue', sans-serif; font-size: 30px; color: var(--text); letter-spacing: 3px; }
+.logo span { color: var(--green); }
+
+/* TOAST */
+.toast { position: absolute; top: 16px; left: 20px; right: 20px; background: var(--card2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 16px; display: flex; align-items: center; gap: 10px; z-index: 1000; animation: toastIn .4s cubic-bezier(.4,0,.2,1); box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+.toast-icon { font-size: 18px; }
+.toast-text { font-size: 13px; font-weight: 700; }
+.toast-sub { font-size: 11px; color: var(--text2); }
+
+/* MODAL */
+.modal-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(10px); z-index: 200; display: none; align-items: flex-end; }
+.modal-overlay.open { display: flex; }
+.modal-sheet { width: 100%; background: var(--bg2); border-radius: 24px 24px 0 0; padding: 12px 24px 40px; border-top: 1px solid var(--border); animation: sheetUp .35s cubic-bezier(.4,0,.2,1); }
+.sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 18px; }
+.sheet-title { font-size: 19px; font-weight: 800; margin-bottom: 18px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- LOADING -->
+  <div class="loading-overlay" id="loading">
+    <div class="loading-logo"><span class="p">P</span>ARI</div>
+    <div class="loading-tagline">Соревнуйся · Ставь · Побеждай</div>
+    <div class="loading-bar-wrap"><div class="loading-bar"></div></div>
+  </div>
+
+  <!-- ==================== ONBOARDING ==================== -->
+  <div class="screen" id="onboarding">
+    <div style="padding:18px 24px 0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+      <div class="logo"><span>P</span>ARI</div>
+      <span style="font-size:13px;color:var(--text3);cursor:pointer;font-weight:600" onclick="goTo('dashboard')">Пропустить</span>
+    </div>
+    <div class="onboard-slides">
+
+      <div class="onboard-slide active" id="slide-0">
+        <div class="onboard-visual" style="background:radial-gradient(circle,rgba(0,255,106,.15),transparent 70%)">🏆</div>
+        <div class="onboard-title">Фитнес —<br>это <span>игра</span></div>
+        <div class="onboard-desc">PARI превращает каждую тренировку в соревнование. Ставишь деньги — бегаешь, поднимаешь, побеждаешь. Реальный азарт, реальный результат.</div>
+        <div class="feature-pills">
+          <div class="feature-pill green">⚡ Батлы с друзьями</div>
+          <div class="feature-pill green">💰 Реальные ставки</div>
+          <div class="feature-pill">🏅 Рейтинги</div>
+          <div class="feature-pill">🔥 Стрики</div>
+        </div>
+      </div>
+
+      <div class="onboard-slide" id="slide-1">
+        <div class="onboard-visual" style="background:radial-gradient(circle,rgba(255,59,92,.15),transparent 70%)">⚔️</div>
+        <div class="onboard-title">Вызывай.<br><span>Побеждай.</span></div>
+        <div class="onboard-desc">Брось вызов другу или найди соперника по рейтингу — как в Chess.com, только для фитнеса. Бег, подтягивания, тонна в зале — сам выбираешь условие и ставку.</div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-top:20px;text-align:left;max-width:300px">
+          <div style="font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Пример пари</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="font-size:18px">🏃</span>
+            <span style="font-size:14px;font-weight:700">Бег 10 км на время</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="font-size:18px">💰</span>
+            <span style="font-size:14px;font-weight:700;color:var(--green)">Ставка: 500 ₽</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:18px">🏆</span>
+            <span style="font-size:14px;font-weight:700">Победитель забирает <span style="color:var(--green)">900 ₽</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="onboard-slide" id="slide-2">
+        <div class="onboard-visual" style="background:radial-gradient(circle,rgba(255,215,0,.12),transparent 70%)">⭐</div>
+        <div class="onboard-title">Бей рекорды<br><span>звёзд</span></div>
+        <div class="onboard-desc">Niletto подтянулся 47 раз — можешь больше? Тимати пробежал марафон — дерзай. Побеждай звёзд и получай долю общего банка. Это и есть настоящий фитнес.</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:20px;width:100%;max-width:300px">
+          <div style="display:flex;align-items:center;gap:10px;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;padding:10px 14px;backdrop-filter:blur(10px)">
+            <span style="font-size:20px">👥</span><span style="font-size:13px;font-weight:600">Групповые батлы команд — Сбер vs Тинькофф</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;padding:10px 14px;backdrop-filter:blur(10px)">
+            <span style="font-size:20px">📱</span><span style="font-size:13px;font-weight:600">Результаты с Apple Watch / Samsung Health</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;background:var(--glass);border:1px solid rgba(0,255,106,.2);border-radius:12px;padding:10px 14px;backdrop-filter:blur(10px)">
+            <span style="font-size:20px">🎓</span><span style="font-size:13px;font-weight:600">Курсы подготовки к батлам прямо в приложении</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="onboard-dots">
+      <div class="onboard-dot active" id="dot-0"></div>
+      <div class="onboard-dot" id="dot-1"></div>
+      <div class="onboard-dot" id="dot-2"></div>
+    </div>
+    <div class="onboard-btn-wrap">
+      <button class="btn-primary" id="onboard-btn" onclick="nextSlide()">Далее →</button>
+    </div>
+  </div>
+
+  <!-- ==================== DASHBOARD ==================== -->
+  <div class="screen" id="dashboard">
+    <div class="dash-header">
+      <div>
+        <div class="dash-greeting">Добрый день 👋</div>
+        <div class="dash-name">Евгений</div>
+      </div>
+      <div class="dash-avatar" onclick="goTo('profile')">🦁<div class="avatar-ring"></div></div>
+    </div>
+    <div class="scroll-content">
+      <div class="balance-card">
+        <div class="balance-label">💰 Баланс</div>
+        <div class="balance-amount">12 840 ₽</div>
+        <div class="balance-stats">
+          <div><div class="balance-stat-label">Выиграно</div><div class="balance-stat-val up">+4 300 ₽</div></div>
+          <div><div class="balance-stat-label">Батлы</div><div class="balance-stat-val">31</div></div>
+          <div><div class="balance-stat-label">XP</div><div class="balance-stat-val" style="color:var(--gold)">2 840</div></div>
+        </div>
+      </div>
+      <div class="section-title">🔥 Стрик <span style="font-family:'Bebas Neue';color:var(--green);font-size:20px">7 дней</span></div>
+      <div class="streak-row" id="streak-row"></div>
+      <div class="quick-start" onclick="goTo('create-battle')">
+        <div><div class="qs-title">⚡ Новый Батл</div><div class="qs-sub">Создать вызов за 30 сек</div></div>
+        <div class="qs-icon">🔥</div>
+      </div>
+      <div class="section-title">Активные пари <span class="section-see-all">Все</span></div>
+      <div id="active-battles"></div>
+      <div class="section-title" style="margin-top:8px">🏅 Лидеры недели</div>
+      <div id="mini-leaders"></div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item active" onclick="goTo('dashboard')">
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>Главная</span>
+      </div>
+      <div class="nav-item" onclick="goTo('friends')">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Друзья</span>
+        <div class="nav-badge">3</div>
+      </div>
+      <div class="nav-item" onclick="goTo('celebrities')">
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <span>Звёзды</span>
+      </div>
+      <div class="nav-item" onclick="goTo('training')">
+        <svg viewBox="0 0 24 24"><path d="M2 20h20M6 20V10M10 20V4M14 20V14M18 20V8"/></svg>
+        <span>Подготовка</span>
+      </div>
+      <div class="nav-item" onclick="goTo('profile')">
+        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Профиль</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== FRIENDS ==================== -->
+  <div class="screen" id="friends">
+    <div class="page-header">
+      <button class="back-btn" onclick="goTo('dashboard')">←</button>
+      <span class="page-title">👥 Друзья</span>
+    </div>
+    <div class="scroll-content">
+      <!-- INVITE BANNER -->
+      <div class="invite-banner" onclick="showToast('🎉','Ссылка скопирована!','Отправь другу и получи 100 ₽')">
+        <div class="invite-banner-icon">🎁</div>
+        <div class="invite-banner-text">
+          <div class="invite-banner-title">Пригласи друга — получи бонус</div>
+          <div class="invite-banner-sub">Каждый твой друг = +100 ₽ на баланс.<br>Без ограничений.</div>
+          <div class="invite-banner-bonus">↗ Моя ссылка: pari.app/ref/eugene</div>
+        </div>
+      </div>
+
+      <!-- GLASS CARDS GRID -->
+      <div class="glass-grid">
+        <div class="glass-card green-tint" onclick="showToast('👥','Поиск друзей','Синхронизируем контакты...')">
+          <div class="glass-card-icon">🔍</div>
+          <div class="glass-card-label">Найти друзей</div>
+          <div class="glass-card-sub">По контактам и соцсетям</div>
+        </div>
+        <div class="glass-card red-tint" onclick="sendChallenge()">
+          <div class="glass-card-icon">⚔️</div>
+          <div class="glass-card-label">Отправить вызов</div>
+          <div class="glass-card-sub">Бросить пари другу</div>
+        </div>
+        <div class="glass-card blue-tint" onclick="openQR()">
+          <div class="glass-card-icon">📲</div>
+          <div class="glass-card-label">Мой QR-код</div>
+          <div class="glass-card-sub">Поделись профилем</div>
+        </div>
+        <div class="glass-card gold-tint" onclick="showToast('🏆','Рейтинг друзей','Загружаем...')">
+          <div class="glass-card-icon">🥇</div>
+          <div class="glass-card-label">Рейтинг друзей</div>
+          <div class="glass-card-sub">Кто лучший в кругу</div>
+        </div>
+      </div>
+
+      <!-- FRIEND SEARCH -->
+      <div class="friends-search">
+        <span style="font-size:16px">🔎</span>
+        <input type="text" placeholder="Найти по нику или имени...">
+      </div>
+
+      <div class="section-title">Мои друзья <span style="font-size:13px;color:var(--text3);font-weight:600">5</span></div>
+      <div id="friends-list"></div>
+
+      <div class="section-title" style="margin-top:8px">Запросы <span class="nav-badge" style="position:static;display:inline-flex;margin-left:6px">3</span></div>
+      <div id="friend-requests"></div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="goTo('dashboard')">
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>Главная</span>
+      </div>
+      <div class="nav-item active" onclick="goTo('friends')">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Друзья</span>
+      </div>
+      <div class="nav-item" onclick="goTo('celebrities')">
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <span>Звёзды</span>
+      </div>
+      <div class="nav-item" onclick="goTo('training')">
+        <svg viewBox="0 0 24 24"><path d="M2 20h20M6 20V10M10 20V4M14 20V14M18 20V8"/></svg>
+        <span>Подготовка</span>
+      </div>
+      <div class="nav-item" onclick="goTo('profile')">
+        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Профиль</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TRAINING ==================== -->
+  <div class="screen" id="training">
+    <div class="page-header">
+      <button class="back-btn" onclick="goTo('dashboard')">←</button>
+      <span class="page-title">🎓 Подготовка</span>
+    </div>
+    <div class="scroll-content">
+      <div class="training-hero">
+        <div class="training-hero-title">Готовься.<br><span style="color:var(--green)">Побеждай.</span></div>
+        <div class="training-hero-sub">Программы специально под каждый тип батла. Готовишься — выигрываешь чаще. Выигрываешь чаще — зарабатываешь больше.</div>
+        <div class="training-stats-row">
+          <div class="training-stat"><div class="training-stat-val">12</div><div class="training-stat-label">Курсов</div></div>
+          <div class="training-stat"><div class="training-stat-val">4 800+</div><div class="training-stat-label">Студентов</div></div>
+          <div class="training-stat"><div class="training-stat-val">+34%</div><div class="training-stat-label">Побед после</div></div>
+        </div>
+      </div>
+
+      <!-- LINK TO BATTLE -->
+      <div class="battle-link-card" onclick="goTo('create-battle')">
+        <div class="battle-link-icon">⚡</div>
+        <div class="battle-link-info">
+          <div class="battle-link-title">Уже готов? Создай батл прямо сейчас</div>
+          <div class="battle-link-sub">Применяй знания в реальном соревновании</div>
+        </div>
+        <div style="font-size:20px;color:var(--text3)">›</div>
+      </div>
+
+      <div class="section-title">🔥 Топ курсы</div>
+      <div id="courses-list"></div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="goTo('dashboard')">
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>Главная</span>
+      </div>
+      <div class="nav-item" onclick="goTo('friends')">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Друзья</span>
+      </div>
+      <div class="nav-item" onclick="goTo('celebrities')">
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <span>Звёзды</span>
+      </div>
+      <div class="nav-item active" onclick="goTo('training')">
+        <svg viewBox="0 0 24 24"><path d="M2 20h20M6 20V10M10 20V4M14 20V14M18 20V8"/></svg>
+        <span>Подготовка</span>
+      </div>
+      <div class="nav-item" onclick="goTo('profile')">
+        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Профиль</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== CREATE BATTLE ==================== -->
+  <div class="screen" id="create-battle">
+    <div class="page-header">
+      <button class="back-btn" onclick="goTo('dashboard')">←</button>
+      <span class="page-title">Создать вызов</span>
+    </div>
+    <div class="scroll-content">
+      <div class="form-section">
+        <div class="form-label">Тип активности</div>
+        <div class="activity-grid" id="activity-grid"></div>
+      </div>
+      <div class="form-section">
+        <div class="form-label">Условие</div>
+        <div class="chip-row" id="condition-chips"></div>
+      </div>
+      <div class="form-section">
+        <div class="form-label">Ставка</div>
+        <div class="stake-input-wrap">
+          <span class="stake-currency">₽</span>
+          <input class="stake-input" type="number" id="stake-val" value="500">
+        </div>
+        <div class="stake-presets">
+          <div class="stake-preset" onclick="setStake(100)">100 ₽</div>
+          <div class="stake-preset" onclick="setStake(500)">500 ₽</div>
+          <div class="stake-preset" onclick="setStake(1000)">1K ₽</div>
+          <div class="stake-preset" onclick="setStake(5000)">5K ₽</div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-label">Формат</div>
+        <div class="type-toggle" id="type-toggle"></div>
+      </div>
+      <button class="btn-primary" onclick="createBattle()">⚡ Создать вызов</button>
+      <div style="height:20px"></div>
+    </div>
+  </div>
+
+  <!-- ==================== FIND OPPONENT ==================== -->
+  <div class="screen" id="find-opponent">
+    <div class="page-header">
+      <button class="back-btn" onclick="goTo('create-battle')">←</button>
+      <span class="page-title">Поиск соперника</span>
+    </div>
+    <div class="scroll-content">
+      <div class="search-summary" id="battle-summary"></div>
+      <div class="searching-animation" id="searching-anim">
+        <div class="radar">
+          <div class="radar-sweep"></div>
+          <div class="radar-dot"></div>
+        </div>
+        <div class="searching-title">Ищем соперника...</div>
+        <div class="searching-sub">Подбираем по рейтингу</div>
+        <button class="btn-primary" style="max-width:220px;margin:0 auto" onclick="skipSearch()">Быстрый матч ⚡</button>
+      </div>
+      <div id="opponent-cards" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- ==================== BATTLE SCREEN ==================== -->
+  <div class="screen" id="battle-screen">
+    <div class="battle-header">
+      <div class="battle-type-label">🔴 LIVE</div>
+      <div class="battle-condition" id="battle-cond-label">Бег 5 км на время</div>
+      <div class="battle-stake-big" id="battle-stake-label">1 000 ₽</div>
+    </div>
+    <div class="battle-arena">
+      <div class="players-vs">
+        <div class="arena-player">
+          <div class="arena-avatar" style="background:linear-gradient(135deg,rgba(0,255,106,.25),rgba(0,100,255,.25))">🦁<div class="glow" style="border-color:var(--green)"></div></div>
+          <div class="arena-player-name">Я</div>
+          <div class="arena-player-stat" id="my-stat">0.0</div>
+          <div class="arena-player-sublabel" id="stat-unit">км</div>
+        </div>
+        <div class="vs-badge">VS</div>
+        <div class="arena-player">
+          <div class="arena-avatar" id="opp-arena-avatar" style="background:linear-gradient(135deg,rgba(255,59,92,.25),rgba(255,107,0,.25))">🐯<div class="glow" style="border-color:var(--red)"></div></div>
+          <div class="arena-player-name" id="opp-name-arena">Соперник</div>
+          <div class="arena-player-stat" id="opp-stat" style="color:var(--red)">0.0</div>
+          <div class="arena-player-sublabel" id="stat-unit2">км</div>
+        </div>
+      </div>
+      <div class="battle-progress-section">
+        <div class="bp-label">Мой прогресс</div>
+        <div class="bp-bar"><div class="bp-fill" id="my-progress" style="width:0%"></div></div>
+        <div class="bp-label" style="margin-top:10px">Соперник</div>
+        <div class="bp-bar"><div class="bp-fill opp-fill" id="opp-progress" style="width:0%"></div></div>
+      </div>
+      <div class="battle-timer">
+        <div class="timer-label">Осталось</div>
+        <div class="timer-value" id="timer-display">05:00</div>
+      </div>
+    </div>
+    <div class="battle-actions">
+      <button class="btn-battle-start" id="start-btn" onclick="startBattle()">🚀 Начать</button>
+      <button class="btn-battle-end" onclick="endBattle()">Сдаться</button>
+    </div>
+  </div>
+
+  <!-- ==================== RESULT ==================== -->
+  <div class="screen" id="result-screen">
+    <div class="result-content" id="result-content">
+      <div class="confetti" id="confetti"></div>
+      <div class="result-emoji" id="result-emoji">🏆</div>
+      <div class="result-title" id="result-title">ПОБЕДА!</div>
+      <div class="result-sub" id="result-sub">Ты сделал это!</div>
+      <div class="result-card">
+        <div class="result-row"><span class="result-row-label">Банк</span><span class="result-row-val" id="res-stake">1 000 ₽</span></div>
+        <div class="result-row"><span class="result-row-label">Комиссия (10%)</span><span class="result-row-val red" id="res-commission">-100 ₽</span></div>
+        <div class="result-row"><span class="result-row-label">Выигрыш</span><span class="result-row-val green" id="res-win">+900 ₽</span></div>
+        <div class="result-row" style="border-bottom:none;padding-top:14px">
+          <span class="result-row-label" style="font-weight:800;font-size:15px">Итого</span>
+          <span class="result-row-val green" style="font-size:20px" id="res-total">+900 ₽</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;width:100%">
+        <button class="btn-primary" onclick="goTo('dashboard')">На главную</button>
+        <button onclick="goTo('create-battle')" style="flex:1;padding:16px;background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:13px;font-weight:700;cursor:pointer;">Ещё батл</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== CELEBRITIES ==================== -->
+  <div class="screen" id="celebrities">
+    <div class="page-header">
+      <button class="back-btn" onclick="goTo('dashboard')">←</button>
+      <span class="page-title">⭐ Звёздные Батлы</span>
+    </div>
+    <div class="scroll-content">
+      <div class="celeb-featured">
+        <div class="featured-badge">🔥 Горящий вызов</div>
+        <div class="celeb-featured-top">
+          <div class="celeb-avatar-big">🎤</div>
+          <div><div class="celeb-name">Niletto</div><div class="celeb-cat">Музыкант • 4.2M подписчиков</div></div>
+        </div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:10px">Максимум подтягиваний за 2 минуты</div>
+        <div class="celeb-record">
+          <div style="font-size:18px">💪</div>
+          <div><div class="celeb-record-label">Рекорд Niletto</div><div class="celeb-record-val">47 ПОВТОРЕНИЙ</div></div>
+        </div>
+        <div class="celeb-bank">Общий банк: <span>124 500 ₽</span> • 847 участников</div>
+        <button class="btn-challenge" onclick="showCelebChallenge()">🥊 Принять вызов — 100 ₽</button>
+      </div>
+      <div class="section-title">Все звёздные батлы</div>
+      <div id="celeb-list"></div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="goTo('dashboard')"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Главная</span></div>
+      <div class="nav-item" onclick="goTo('friends')"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Друзья</span></div>
+      <div class="nav-item active" onclick="goTo('celebrities')"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span>Звёзды</span></div>
+      <div class="nav-item" onclick="goTo('training')"><svg viewBox="0 0 24 24"><path d="M2 20h20M6 20V10M10 20V4M14 20V14M18 20V8"/></svg><span>Подготовка</span></div>
+      <div class="nav-item" onclick="goTo('profile')"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Профиль</span></div>
+    </div>
+  </div>
+
+  <!-- ==================== LEADERBOARD ==================== -->
+  <div class="screen" id="leaderboard">
+    <div class="page-header">
+      <button class="back-btn" onclick="goTo('dashboard')">←</button>
+      <span class="page-title">🏆 Рейтинг</span>
+    </div>
+    <div class="scroll-content" style="padding:0 20px 90px">
+      <div class="lb-tabs" id="lb-tabs" style="margin-bottom:16px"></div>
+      <div class="lb-podium" id="lb-podium"></div>
+      <div class="lb-list" id="lb-list"></div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="goTo('dashboard')"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Главная</span></div>
+      <div class="nav-item" onclick="goTo('friends')"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Друзья</span></div>
+      <div class="nav-item" onclick="goTo('celebrities')"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span>Звёзды</span></div>
+      <div class="nav-item" onclick="goTo('training')"><svg viewBox="0 0 24 24"><path d="M2 20h20M6 20V10M10 20V4M14 20V14M18 20V8"/></svg><span>Подготовка</span></div>
+      <div class="nav-item active" onclick="goTo('leaderboard')"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span>Рейтинг</span></div>
+    </div>
+  </div>
+
+  <!-- ==================== PROFILE ==================== -->
+  <div class="screen" id="profile">
+    <div class="page-header">
+      <button class="back-btn" onclick="goTo('dashboard')">←</button>
+      <span class="page-title">Мой профиль</span>
+    </div>
+    <div class="scroll-content">
+      <div class="profile-hero">
+        <div class="profile-avatar-wrap">
+          <div class="profile-avatar-big">🦁</div>
+          <div class="profile-level-badge">12</div>
+        </div>
+        <div class="profile-name">Евгений</div>
+        <div class="profile-handle">@eugene_ufa • Уфа 🏙️</div>
+        <div class="profile-league">🥇 Золотая лига</div>
+      </div>
+      <div style="padding:0 20px">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-val green">23</div><div class="stat-label">Победы</div></div>
+          <div class="stat-card"><div class="stat-val red">8</div><div class="stat-label">Поражения</div></div>
+          <div class="stat-card"><div class="stat-val gold">74%</div><div class="stat-label">% Побед</div></div>
+        </div>
+        <div class="xp-section">
+          <div class="xp-header"><span class="xp-label">⚡ XP — Уровень 12</span><span class="xp-val">2840 / 4000</span></div>
+          <div class="xp-bar"><div class="xp-fill"></div></div>
+        </div>
+        <div class="section-title">Достижения</div>
+        <div class="achievements-grid" id="achievements-grid"></div>
+        <div class="section-title" style="margin-top:4px">История батлов</div>
+        <div id="battle-history"></div>
+        <div style="height:20px"></div>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="goTo('dashboard')"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Главная</span></div>
+      <div class="nav-item" onclick="goTo('friends')"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Друзья</span></div>
+      <div class="nav-item" onclick="goTo('celebrities')"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span>Звёзды</span></div>
+      <div class="nav-item" onclick="goTo('training')"><svg viewBox="0 0 24 24"><path d="M2 20h20M6 20V10M10 20V4M14 20V14M18 20V8"/></svg><span>Подготовка</span></div>
+      <div class="nav-item active" onclick="goTo('profile')"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Профиль</span></div>
+    </div>
+  </div>
+
+  <!-- ==================== MODALS ==================== -->
+  <div class="modal-overlay" id="celeb-modal">
+    <div class="modal-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">🥊 Вызов Niletto</div>
+      <div style="margin-bottom:18px">
+        <div style="font-size:14px;color:var(--text2);margin-bottom:12px">Задача: побить рекорд <strong style="color:var(--text)">47 подтягиваний за 2 мин</strong></div>
+        <div style="background:var(--bg3);border-radius:14px;padding:16px;margin-bottom:12px">
+          <div style="font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">СТАВКА</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--green)">100 ₽</div>
+          <div style="font-size:12px;color:var(--text2)">Выиграешь: ~300–2500 ₽ из банка 124 500 ₽</div>
+        </div>
+        <div style="font-size:12px;color:var(--text3);line-height:1.6">Результат подтверждается скриншотом Apple Fitness / Samsung Health или данными с часов.</div>
+      </div>
+      <button class="btn-primary" onclick="acceptCeleb()" style="margin-bottom:10px">Принять вызов — 100 ₽</button>
+      <button onclick="closeModal('celeb-modal')" style="width:100%;padding:15px;background:none;border:1.5px solid var(--border);border-radius:var(--radius);color:var(--text2);font-size:14px;font-weight:700;cursor:pointer;">Отмена</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="qr-modal">
+    <div class="modal-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">📲 Мой QR-профиль</div>
+      <div style="text-align:center;margin-bottom:20px">
+        <div class="qr-display">
+          <svg class="qr-inner" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
+            <!-- QR code visual simulation -->
+            <rect width="150" height="150" fill="white"/>
+            <!-- Top-left finder -->
+            <rect x="10" y="10" width="40" height="40" fill="#111" rx="4"/>
+            <rect x="16" y="16" width="28" height="28" fill="white" rx="2"/>
+            <rect x="22" y="22" width="16" height="16" fill="#111" rx="2"/>
+            <!-- Top-right finder -->
+            <rect x="100" y="10" width="40" height="40" fill="#111" rx="4"/>
+            <rect x="106" y="16" width="28" height="28" fill="white" rx="2"/>
+            <rect x="112" y="22" width="16" height="16" fill="#111" rx="2"/>
+            <!-- Bottom-left finder -->
+            <rect x="10" y="100" width="40" height="40" fill="#111" rx="4"/>
+            <rect x="16" y="106" width="28" height="28" fill="white" rx="2"/>
+            <rect x="22" y="112" width="16" height="16" fill="#111" rx="2"/>
+            <!-- Data dots -->
+            <rect x="60" y="10" width="6" height="6" fill="#111"/>
+            <rect x="70" y="10" width="6" height="6" fill="#111"/>
+            <rect x="60" y="20" width="6" height="6" fill="#111"/>
+            <rect x="80" y="20" width="6" height="6" fill="#111"/>
+            <rect x="70" y="30" width="6" height="6" fill="#111"/>
+            <rect x="80" y="30" width="6" height="6" fill="#111"/>
+            <rect x="60" y="40" width="6" height="6" fill="#111"/>
+            <rect x="10" y="60" width="6" height="6" fill="#111"/>
+            <rect x="20" y="60" width="6" height="6" fill="#111"/>
+            <rect x="30" y="70" width="6" height="6" fill="#111"/>
+            <rect x="40" y="60" width="6" height="6" fill="#111"/>
+            <rect x="60" y="60" width="6" height="6" fill="#111"/>
+            <rect x="70" y="60" width="6" height="6" fill="#111"/>
+            <rect x="80" y="60" width="6" height="6" fill="#111"/>
+            <rect x="90" y="60" width="6" height="6" fill="#111"/>
+            <rect x="110" y="60" width="6" height="6" fill="#111"/>
+            <rect x="130" y="60" width="6" height="6" fill="#111"/>
+            <rect x="60" y="70" width="6" height="6" fill="#111"/>
+            <rect x="90" y="70" width="6" height="6" fill="#111"/>
+            <rect x="120" y="70" width="6" height="6" fill="#111"/>
+            <rect x="60" y="80" width="6" height="6" fill="#111"/>
+            <rect x="70" y="80" width="6" height="6" fill="#111"/>
+            <rect x="100" y="80" width="6" height="6" fill="#111"/>
+            <rect x="110" y="80" width="6" height="6" fill="#111"/>
+            <rect x="130" y="80" width="6" height="6" fill="#111"/>
+            <rect x="60" y="100" width="6" height="6" fill="#111"/>
+            <rect x="80" y="100" width="6" height="6" fill="#111"/>
+            <rect x="90" y="100" width="6" height="6" fill="#111"/>
+            <rect x="110" y="100" width="6" height="6" fill="#111"/>
+            <rect x="60" y="110" width="6" height="6" fill="#111"/>
+            <rect x="70" y="110" width="6" height="6" fill="#111"/>
+            <rect x="100" y="110" width="6" height="6" fill="#111"/>
+            <rect x="60" y="120" width="6" height="6" fill="#111"/>
+            <rect x="90" y="120" width="6" height="6" fill="#111"/>
+            <rect x="120" y="120" width="6" height="6" fill="#111"/>
+            <rect x="130" y="110" width="6" height="6" fill="#111"/>
+            <!-- Center logo space -->
+            <rect x="58" y="58" width="34" height="34" fill="white" rx="4"/>
+          </svg>
+          <div class="qr-logo-overlay">
+            <div class="qr-logo-badge">PARI</div>
+          </div>
+        </div>
+        <div style="font-size:16px;font-weight:800;margin-bottom:4px">@eugene_ufa</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:16px">pari.app/p/eugene_ufa</div>
+        <div style="display:flex;gap:8px;justify-content:center">
+          <div style="padding:8px 20px;background:var(--green-dim);border:1px solid rgba(0,255,106,.3);border-radius:20px;font-size:13px;font-weight:700;color:var(--green);cursor:pointer" onclick="showToast('📋','Ссылка скопирована!','pari.app/p/eugene_ufa')">Скопировать</div>
+          <div style="padding:8px 20px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;font-size:13px;font-weight:700;cursor:pointer" onclick="showToast('📤','Поделился!','Профиль отправлен')">Поделиться</div>
+        </div>
+      </div>
+      <button onclick="closeModal('qr-modal')" style="width:100%;padding:15px;background:none;border:1.5px solid var(--border);border-radius:var(--radius);color:var(--text2);font-size:14px;font-weight:700;cursor:pointer;">Закрыть</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="course-modal">
+    <div class="modal-sheet">
+      <div class="sheet-handle"></div>
+      <div id="course-modal-content"></div>
+      <button onclick="closeModal('course-modal')" style="width:100%;padding:15px;background:none;border:1.5px solid var(--border);border-radius:var(--radius);color:var(--text2);font-size:14px;font-weight:700;cursor:pointer;margin-top:10px">Закрыть</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ==================== DATA ====================
+const state = {
+  selectedActivity: 'run',
+  selectedCondition: '5 км',
+  stake: 500,
+  battleType: '1v1',
+  selectedOpponent: null,
+  battleRunning: false,
+  battleInterval: null,
+  myProgress: 0,
+  oppProgress: 0
+};
+
+const activities = [
+  {id:'run',icon:'🏃',name:'Бег'},
+  {id:'steps',icon:'👟',name:'Шаги'},
+  {id:'gym',icon:'🏋️',name:'Зал'},
+  {id:'pullups',icon:'💪',name:'Подтяг.'},
+  {id:'cycling',icon:'🚴',name:'Вело'},
+  {id:'swim',icon:'🏊',name:'Плаван.'}
+];
+const conditions = {
+  run:['3 км','5 км','10 км','21 км'],
+  steps:['5 000','10 000','20 000'],
+  gym:['10 тонн','20 тонн','50 тонн'],
+  pullups:['10 повт','25 повт','50 повт','100 повт'],
+  cycling:['10 км','30 км','50 км'],
+  swim:['500 м','1 км','2 км']
+};
+const opponents = [
+  {emoji:'🐯',name:'Андрей К.',city:'Москва',rating:1840,wins:31,wr:72,bg:'linear-gradient(135deg,rgba(255,107,0,.3),rgba(200,50,50,.3))'},
+  {emoji:'🦊',name:'Дмитрий П.',city:'СПб',rating:1820,wins:28,wr:68,bg:'linear-gradient(135deg,rgba(200,100,0,.3),rgba(180,50,180,.3))'},
+  {emoji:'🐺',name:'Максим С.',city:'Казань',rating:1800,wins:25,wr:65,bg:'linear-gradient(135deg,rgba(100,100,255,.3),rgba(50,150,200,.3))'},
+  {emoji:'🦅',name:'Никита Р.',city:'Уфа',rating:1780,wins:22,wr:61,bg:'linear-gradient(135deg,rgba(0,180,100,.3),rgba(0,100,200,.3))'}
+];
+const celebrities = [
+  {emoji:'🎵',name:'Тимати',cat:'Музыкант',challenge:'Марафон 42 км',prize:'89 200 ₽',participants:623,color:'rgba(255,80,80,.4)'},
+  {emoji:'🥇',name:'Хасан Халмурзаев',cat:'Олимп. чемпион',challenge:'Борьба 3 раунда',prize:'210 000 ₽',participants:1240,color:'rgba(255,200,0,.4)'},
+  {emoji:'⚽',name:'Артём Дзюба',cat:'Футбол',challenge:'Бег 5 км',prize:'45 000 ₽',participants:412,color:'rgba(0,150,255,.4)'},
+  {emoji:'🏋️',name:'Светлана Похожая',cat:'Пауэрлифтинг',challenge:'Тонна в зале',prize:'67 000 ₽',participants:521,color:'rgba(150,50,255,.4)'}
+];
+const leaderboardData = [
+  {emoji:'👑',name:'Евгений',city:'Уфа',points:4280,rank:1,me:true},
+  {emoji:'🐯',name:'Андрей К.',city:'Москва',points:4120,rank:2},
+  {emoji:'🦊',name:'Дмитрий П.',city:'СПб',points:3890,rank:3},
+  {emoji:'🐺',name:'Максим С.',city:'Казань',points:3650,rank:4},
+  {emoji:'🦅',name:'Никита Р.',city:'Уфа',points:3420,rank:5},
+  {emoji:'🐻',name:'Алексей Т.',city:'Москва',points:3100,rank:6},
+  {emoji:'🦁',name:'Сергей В.',city:'Нижний',points:2980,rank:7}
+];
+const achievements = [
+  {icon:'🏆',name:'Чемпион',unlocked:true},
+  {icon:'🔥',name:'7 стрик',unlocked:true},
+  {icon:'💰',name:'5000₽',unlocked:true},
+  {icon:'⚡',name:'Быстрый',unlocked:true},
+  {icon:'💪',name:'Силач',unlocked:false},
+  {icon:'🌍',name:'Марафон',unlocked:false},
+  {icon:'👥',name:'Группа',unlocked:false},
+  {icon:'⭐',name:'Звезда',unlocked:false}
+];
+const battleHistory = [
+  {opponent:'Андрей К.',activity:'🏃 Бег 5 км',result:'win',amount:'+450 ₽',date:'Вчера'},
+  {opponent:'Дмитрий П.',activity:'💪 Подтяг. 25',result:'win',amount:'+900 ₽',date:'2 дня'},
+  {opponent:'Максим С.',activity:'🏋️ Тонна 10т',result:'lose',amount:'-500 ₽',date:'3 дня'},
+  {opponent:'Niletto',activity:'💪 100 подтяг.',result:'lose',amount:'-100 ₽',date:'5 дней'},
+  {opponent:'Никита Р.',activity:'🏃 3 км',result:'win',amount:'+270 ₽',date:'1 нед.'}
+];
+const friendsList = [
+  {emoji:'🐯',name:'Андрей К.',city:'Москва',rating:1840,wins:31},
+  {emoji:'🦊',name:'Дмитрий П.',city:'СПб',rating:1820,wins:28},
+  {emoji:'🐺',name:'Максим С.',city:'Казань',rating:1800,wins:25},
+  {emoji:'🦅',name:'Никита Р.',city:'Уфа',rating:1780,wins:22},
+  {emoji:'🐻',name:'Алексей Т.',city:'Москва',rating:1650,wins:15}
+];
+const friendRequests = [
+  {emoji:'🦋',name:'Катя В.',city:'Уфа'},
+  {emoji:'🐉',name:'Роман Г.',city:'Москва'},
+  {emoji:'🦄',name:'Анна С.',city:'СПб'}
+];
+const courses = [
+  {
+    icon:'🏃', imgClass:'purple', title:'Бег от нуля до 10 км',
+    desc:'12 тренировок — и ты готов к любому беговому батлу. Специально для побед над новичками и средняками.',
+    badge:'badge-free', badgeText:'Бесплатно', price:'free', priceText:'Бесплатно',
+    lessons:12, time:'4 нед.', locked:false,
+    battleBonus:'Нужен для батлов на 10 км+'
+  },
+  {
+    icon:'💪', imgClass:'orange', title:'100 подтягиваний за 30 дней',
+    desc:'Программа тренировок, которая поможет побить рекорд Niletto и выиграть звёздный батл.',
+    badge:'badge-paid', badgeText:'200 ₽', price:'paid', priceText:'200 ₽',
+    lessons:30, time:'1 мес.', locked:false,
+    battleBonus:'🎤 Нужен для вызова Niletto'
+  },
+  {
+    icon:'🏋️', imgClass:'blue', title:'Тонна в зале за 1 тренировку',
+    desc:'Техника и стратегия набора максимального тоннажа. Для корпоративных групповых батлов.',
+    badge:'badge-paid', badgeText:'350 ₽', price:'paid', priceText:'350 ₽',
+    lessons:8, time:'3 нед.', locked:false,
+    battleBonus:'Для групповых батлов команд'
+  },
+  {
+    icon:'🚴', imgClass:'green', title:'Кардио ELITE — для чемпионов',
+    desc:'Программа профессионального уровня. Максимальная выносливость для марафонов и длинных батлов.',
+    badge:'badge-premium', badgeText:'750 ₽', price:'paid', priceText:'750 ₽',
+    lessons:24, time:'8 нед.', locked:true,
+    battleBonus:'Для батлов на 21+ км'
+  }
+];
+
+// ==================== NAVIGATION ====================
+function goTo(screen) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(screen);
+  if (el) el.classList.add('active');
+
+  if (screen === 'dashboard') renderDashboard();
+  if (screen === 'create-battle') renderCreateBattle();
+  if (screen === 'celebrities') renderCelebsList();
+  if (screen === 'leaderboard') renderLeaderboard();
+  if (screen === 'profile') renderProfile();
+  if (screen === 'friends') renderFriends();
+  if (screen === 'training') renderTraining();
+}
+
+// ==================== ONBOARDING ====================
+let onboardSlide = 0;
+function nextSlide() {
+  const slides = document.querySelectorAll('.onboard-slide');
+  const dots = document.querySelectorAll('.onboard-dot');
+  const btn = document.getElementById('onboard-btn');
+  if (onboardSlide < slides.length - 1) {
+    slides[onboardSlide].classList.remove('active');
+    slides[onboardSlide].classList.add('prev');
+    onboardSlide++;
+    slides[onboardSlide].classList.add('active');
+    dots.forEach((d,i) => d.classList.toggle('active', i === onboardSlide));
+    if (onboardSlide === slides.length - 1) btn.textContent = '🚀 Начать';
+  } else {
+    goTo('dashboard');
+  }
+}
+
+// ==================== DASHBOARD ====================
+function renderDashboard() {
+  const days = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+  const done = [true,true,true,true,true,true,false];
+  document.getElementById('streak-row').innerHTML = days.map((d,i) => `
+    <div class="streak-day">
+      <div class="streak-circle ${done[i]?'done':''} ${i===6?'today':''}">${done[i]?'✓':i===6?'·':''}</div>
+      <div class="streak-day-label">${d}</div>
+    </div>`).join('');
+
+  const battles = [
+    {title:'Бег 5 км',type:'active-battle',badge:'badge-active',badgeTxt:'Активное',player:'Андрей К.',emoji:'🐯',progress:62,stake:500,time:'03:21 осталось'},
+    {title:'Подтягивания ×25',type:'pending-battle',badge:'badge-pending',badgeTxt:'Ожидание',player:'Дмитрий П.',emoji:'🦊',progress:0,stake:1000,time:'Ждёт принятия'}
+  ];
+  document.getElementById('active-battles').innerHTML = battles.map(b => `
+    <div class="battle-card ${b.type}" onclick="openActiveBattle('${b.title}',${b.stake},'${b.player}','${b.emoji}')">
+      <div class="battle-card-top"><span class="battle-card-title">${b.title}</span><span class="battle-card-badge ${b.badge}">${b.badgeTxt}</span></div>
+      <div class="battle-card-players">
+        <div class="player-mini"><div class="player-mini-avatar" style="background:var(--green-dim)">🦁</div><span class="player-mini-name">Я</span></div>
+        <span class="vs-mini">VS</span>
+        <div class="player-mini"><div class="player-mini-avatar" style="background:var(--red-dim)">${b.emoji}</div><span class="player-mini-name">${b.player}</span></div>
+      </div>
+      ${b.progress>0?`<div class="progress-labels"><span>Прогресс</span><span>${b.progress}%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${b.progress}%"></div></div>`:''}
+      <div class="battle-card-footer"><span class="battle-stake">${b.stake.toLocaleString('ru')} ₽</span><span class="battle-time">${b.time}</span></div>
+    </div>`).join('');
+
+  document.getElementById('mini-leaders').innerHTML = leaderboardData.slice(0,3).map((l,i) => `
+    <div class="battle-card" style="border:none;padding:10px 14px;display:flex;align-items:center;gap:10px">
+      <span style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--text3);width:20px">${i+1}</span>
+      <span style="font-size:18px">${l.emoji}</span>
+      <span style="flex:1;font-size:13px;font-weight:700">${l.name}</span>
+      <span style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--green)">${l.points.toLocaleString('ru')}</span>
+    </div>`).join('');
+}
+
+function openActiveBattle(title, stake, oppName, oppEmoji) {
+  state.stake = stake;
+  state.selectedOpponent = {name:oppName, emoji:oppEmoji};
+  document.getElementById('battle-cond-label').textContent = title;
+  document.getElementById('battle-stake-label').textContent = stake.toLocaleString('ru') + ' ₽';
+  document.getElementById('opp-name-arena').textContent = oppName;
+  document.getElementById('opp-arena-avatar').innerHTML = oppEmoji + '<div class="glow" style="border-color:var(--red)"></div>';
+  resetBattle();
+  goTo('battle-screen');
+}
+
+// ==================== FRIENDS ====================
+function renderFriends() {
+  document.getElementById('friends-list').innerHTML = friendsList.map(f => `
+    <div class="friend-card">
+      <div class="friend-avatar" style="background:var(--bg3)">${f.emoji}</div>
+      <div class="friend-info">
+        <div class="friend-name">${f.name}</div>
+        <div class="friend-meta">${f.city} • ${f.wins} побед</div>
+      </div>
+      <div class="friend-rating">${f.rating}</div>
+      <div class="friend-challenge-btn" onclick="challengeFriend('${f.name}')">⚔️</div>
+    </div>`).join('');
+
+  document.getElementById('friend-requests').innerHTML = friendRequests.map(r => `
+    <div class="friend-card">
+      <div class="friend-avatar" style="background:var(--bg3)">${r.emoji}</div>
+      <div class="friend-info"><div class="friend-name">${r.name}</div><div class="friend-meta">${r.city}</div></div>
+      <div style="display:flex;gap:8px">
+        <div style="padding:8px 14px;background:var(--green);border-radius:10px;color:#000;font-size:12px;font-weight:800;cursor:pointer" onclick="acceptFriend('${r.name}',this)">✓</div>
+        <div style="padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;font-size:12px;font-weight:800;cursor:pointer" onclick="this.closest('.friend-card').remove()">✕</div>
+      </div>
+    </div>`).join('');
+}
+
+function challengeFriend(name) {
+  showToast('⚔️','Вызов отправлен!',name + ' получит уведомление');
+}
+function acceptFriend(name, el) {
+  el.closest('.friend-card').remove();
+  showToast('👥','Друг добавлен!',name + ' теперь в твоём кругу');
+}
+function sendChallenge() {
+  showToast('⚔️','Вызов готов!','Отправь другу ссылку на батл');
+}
+function openQR() { document.getElementById('qr-modal').classList.add('open'); }
+
+// ==================== TRAINING ====================
+function renderTraining() {
+  document.getElementById('courses-list').innerHTML = courses.map((c,i) => `
+    <div class="course-card" onclick="openCourse(${i})">
+      <div class="course-card-img ${c.imgClass}">${c.icon}
+        ${c.locked?'<div class="course-locked-overlay">🔒</div>':''}
+      </div>
+      <div class="course-card-body">
+        <div class="course-badge ${c.badge}">${c.badgeText}</div>
+        <div class="course-title">${c.title}</div>
+        <div class="course-desc">${c.desc}</div>
+        ${c.battleBonus?`<div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:8px">⚡ ${c.battleBonus}</div>`:''}
+        <div class="course-footer">
+          <span class="course-meta">📚 ${c.lessons} уроков • ⏱ ${c.time}</span>
+          <span class="course-price ${c.price}">${c.priceText}</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function openCourse(i) {
+  const c = courses[i];
+  document.getElementById('course-modal-content').innerHTML = `
+    <div class="sheet-title">${c.icon} ${c.title}</div>
+    <div style="font-size:14px;color:var(--text2);margin-bottom:16px;line-height:1.6">${c.desc}</div>
+    <div style="background:var(--bg3);border-radius:14px;padding:16px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:13px;color:var(--text2)">📚 Уроков</span><span style="font-weight:700">${c.lessons}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:13px;color:var(--text2)">⏱ Длительность</span><span style="font-weight:700">${c.time}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span style="font-size:13px;color:var(--text2)">💰 Стоимость</span><span style="font-weight:800;color:${c.price==='free'?'var(--green)':'var(--gold)'}">${c.priceText}</span>
+      </div>
+    </div>
+    ${c.battleBonus?`<div style="background:var(--green-dim);border:1px solid rgba(0,255,106,.2);border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:13px;font-weight:700;color:var(--green)">⚡ ${c.battleBonus}</div>`:''}
+    <button class="btn-primary" onclick="${c.price==='free'?`closeModal('course-modal');showToast('🎓','Курс начат!','Первый урок разблокирован')`:`closeModal('course-modal');showToast('💳','Оплата прошла!','Курс разблокирован')`}" style="margin-bottom:0">
+      ${c.price==='free'?'Начать бесплатно':'Купить за ' + c.priceText}
+    </button>
+  `;
+  document.getElementById('course-modal').classList.add('open');
+}
+
+// ==================== CREATE BATTLE ====================
+function renderCreateBattle() {
+  document.getElementById('activity-grid').innerHTML = activities.map(a => `
+    <div class="activity-card ${a.id===state.selectedActivity?'selected':''}" onclick="selectActivity('${a.id}')">
+      <div class="activity-icon">${a.icon}</div>
+      <div class="activity-name">${a.name}</div>
+    </div>`).join('');
+
+  document.getElementById('condition-chips').innerHTML = (conditions[state.selectedActivity]||[]).map(c => `
+    <div class="chip ${c===state.selectedCondition?'selected':''}" onclick="selectCondition('${c}')">${c}</div>`).join('');
+
+  document.getElementById('type-toggle').innerHTML = `
+    <div class="type-btn ${state.battleType==='1v1'?'selected':''}" onclick="selectType('1v1')">
+      <div class="type-btn-icon">⚔️</div><div class="type-btn-label">1 против 1</div>
+    </div>
+    <div class="type-btn ${state.battleType==='group'?'selected':''}" onclick="selectType('group')">
+      <div class="type-btn-icon">👥</div><div class="type-btn-label">Группа</div>
+    </div>`;
+}
+
+function selectActivity(id) { state.selectedActivity=id; state.selectedCondition=(conditions[id]||[])[0]||''; renderCreateBattle(); }
+function selectCondition(c) { state.selectedCondition=c; renderCreateBattle(); }
+function selectType(t) { state.battleType=t; renderCreateBattle(); }
+function setStake(v) { state.stake=v; document.getElementById('stake-val').value=v; }
+
+function createBattle() {
+  state.stake = parseInt(document.getElementById('stake-val').value)||500;
+  const act = activities.find(a=>a.id===state.selectedActivity);
+  document.getElementById('battle-summary').innerHTML = `
+    <div class="ss-icon">${act.icon}</div>
+    <div class="ss-info"><div class="ss-title">${act.name}: ${state.selectedCondition}</div><div class="ss-sub">${state.battleType==='1v1'?'1 против 1':'Группа'}</div></div>
+    <div class="ss-stake">${state.stake.toLocaleString('ru')} ₽</div>`;
+  goTo('find-opponent');
+  startSearch();
+}
+
+// ==================== SEARCH ====================
+function startSearch() {
+  document.getElementById('searching-anim').style.display='block';
+  document.getElementById('opponent-cards').style.display='none';
+  setTimeout(() => {
+    document.getElementById('searching-anim').style.display='none';
+    const cards = document.getElementById('opponent-cards');
+    cards.style.display='block';
+    cards.innerHTML = opponents.map((o,i) => `
+      <div class="opponent-card" style="animation-delay:${i*.1}s" onclick="selectOpponent(${i})">
+        <div class="opp-avatar" style="background:${o.bg}">${o.emoji}</div>
+        <div class="opp-info"><div class="opp-name">${o.name}</div><div class="opp-meta">${o.city} • ${o.wins} побед • ${o.wr}%</div></div>
+        <div style="text-align:right"><div class="opp-rating-val">${o.rating}</div><div class="opp-rating-label">Рейтинг</div></div>
+      </div>`).join('');
+  }, 2400);
+}
+
+function skipSearch() {
+  document.getElementById('searching-anim').style.display='none';
+  const cards = document.getElementById('opponent-cards');
+  cards.style.display='block';
+  cards.innerHTML = opponents.slice(0,2).map((o,i) => `
+    <div class="opponent-card" onclick="selectOpponent(${i})">
+      <div class="opp-avatar" style="background:${o.bg}">${o.emoji}</div>
+      <div class="opp-info"><div class="opp-name">${o.name}</div><div class="opp-meta">${o.city} • ${o.wr}% побед</div></div>
+      <div style="text-align:right"><div class="opp-rating-val">${o.rating}</div><div class="opp-rating-label">Рейтинг</div></div>
+    </div>`).join('');
+}
+
+function selectOpponent(i) {
+  state.selectedOpponent = opponents[i];
+  const act = activities.find(a=>a.id===state.selectedActivity);
+  document.getElementById('battle-cond-label').textContent = `${act.name}: ${state.selectedCondition}`;
+  document.getElementById('battle-stake-label').textContent = state.stake.toLocaleString('ru') + ' ₽';
+  document.getElementById('opp-name-arena').textContent = state.selectedOpponent.name;
+  document.getElementById('opp-arena-avatar').innerHTML = state.selectedOpponent.emoji + '<div class="glow" style="border-color:var(--red)"></div>';
+  const u = state.selectedCondition.includes('км')?'км':state.selectedCondition.includes('шаг')||state.selectedCondition.includes('000')?'шаг.':state.selectedCondition.includes('тонн')?'т':'повт.';
+  document.getElementById('stat-unit').textContent=u;
+  document.getElementById('stat-unit2').textContent=u;
+  resetBattle();
+  goTo('battle-screen');
+  showToast('🥊','Вызов принят!',state.selectedOpponent.name+' готов к батлу');
+}
+
+// ==================== BATTLE ====================
+function resetBattle() {
+  clearInterval(state.battleInterval);
+  state.battleRunning=false; state.myProgress=0; state.oppProgress=0;
+  document.getElementById('my-progress').style.width='0%';
+  document.getElementById('opp-progress').style.width='0%';
+  document.getElementById('my-stat').textContent='0.0';
+  document.getElementById('opp-stat').textContent='0.0';
+  document.getElementById('timer-display').textContent='05:00';
+  document.getElementById('start-btn').textContent='🚀 Начать';
+  document.getElementById('start-btn').disabled=false;
+}
+
+let timerSeconds=300;
+function startBattle() {
+  if(state.battleRunning) return;
+  state.battleRunning=true; timerSeconds=300;
+  document.getElementById('start-btn').textContent='⚡ Идёт батл...';
+  document.getElementById('start-btn').disabled=true;
+  const maxVal = parseFloat(state.selectedCondition)||10;
+  state.battleInterval = setInterval(()=>{
+    timerSeconds--;
+    state.myProgress = Math.min(100, state.myProgress + .3+Math.random()*.4);
+    state.oppProgress = Math.min(100, state.oppProgress + .25+Math.random()*.45);
+    document.getElementById('my-stat').textContent = (state.myProgress/100*maxVal).toFixed(1);
+    document.getElementById('opp-stat').textContent = (state.oppProgress/100*maxVal).toFixed(1);
+    document.getElementById('my-progress').style.width=state.myProgress+'%';
+    document.getElementById('opp-progress').style.width=state.oppProgress+'%';
+    const m=Math.floor(timerSeconds/60),s=timerSeconds%60;
+    document.getElementById('timer-display').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+    if(timerSeconds<=0||state.myProgress>=100||state.oppProgress>=100){clearInterval(state.battleInterval);state.battleRunning=false;setTimeout(showResult,500);}
+  },80);
+}
+
+function endBattle(){clearInterval(state.battleInterval);state.battleRunning=false;showResult(true);}
+
+function showResult(surrender=false) {
+  const won = !surrender && state.myProgress >= state.oppProgress;
+  const commission = Math.round(state.stake*.1);
+  const winAmount = state.stake*2-commission;
+  const net = won ? winAmount-state.stake : -state.stake;
+  document.getElementById('result-emoji').textContent = surrender?'😓':won?'🏆':'😔';
+  document.getElementById('result-title').textContent = surrender?'СДАЛСЯ':won?'ПОБЕДА!':'ПОРАЖЕНИЕ';
+  document.getElementById('result-title').className='result-title '+(won?'win':'lose');
+  document.getElementById('result-sub').textContent = won?'Отличная работа, Евгений!':'Тренируйся и вернись сильнее!';
+  document.getElementById('res-stake').textContent=(state.stake*2).toLocaleString('ru')+' ₽';
+  document.getElementById('res-commission').textContent='-'+commission.toLocaleString('ru')+' ₽';
+  document.getElementById('res-win').textContent=won?'+'+winAmount.toLocaleString('ru')+' ₽':'—';
+  document.getElementById('res-win').className='result-row-val '+(won?'green':'red');
+  document.getElementById('res-total').textContent=(net>0?'+':'')+net.toLocaleString('ru')+' ₽';
+  document.getElementById('res-total').className='result-row-val '+(net>0?'green':'red');
+  if(won) spawnConfetti();
+  goTo('result-screen');
+}
+
+function spawnConfetti() {
+  const c=document.getElementById('confetti'); c.innerHTML='';
+  const cols=['var(--green)','var(--gold)','#ff3b5c','#00aaff','#ff9500'];
+  for(let i=0;i<40;i++){const p=document.createElement('div');p.className='confetti-piece';p.style.cssText=`left:${Math.random()*100}%;background:${cols[Math.floor(Math.random()*cols.length)]};animation-delay:${Math.random()*1.5}s;animation-duration:${2+Math.random()*2}s;width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;`;c.appendChild(p);}
+}
+
+// ==================== CELEBRITIES ====================
+function renderCelebsList() {
+  document.getElementById('celeb-list').innerHTML = celebrities.map(c=>`
+    <div class="celeb-card" onclick="showCelebChallenge()">
+      <div class="celeb-card-avatar" style="background:${c.color}">${c.emoji}</div>
+      <div style="flex:1">
+        <div class="celeb-card-name">${c.name}</div>
+        <div class="celeb-card-challenge">${c.cat} • ${c.challenge}</div>
+        <div class="celeb-card-prize">${c.prize} <span class="celeb-card-participants">${c.participants} участников</span></div>
+      </div>
+      <div style="font-size:18px;color:var(--text3)">›</div>
+    </div>`).join('');
+}
+
+function showCelebChallenge(){document.getElementById('celeb-modal').classList.add('open');}
+
+function acceptCeleb(){
+  closeModal('celeb-modal');
+  state.stake=100; state.selectedOpponent={name:'Niletto',emoji:'🎤'};
+  document.getElementById('battle-cond-label').textContent='Подтягивания за 2 мин';
+  document.getElementById('battle-stake-label').textContent='100 ₽';
+  document.getElementById('opp-name-arena').textContent='Niletto';
+  document.getElementById('opp-arena-avatar').innerHTML='🎤<div class="glow" style="border-color:rgba(255,107,149,.8)"></div>';
+  document.getElementById('stat-unit').textContent='повт.';
+  document.getElementById('stat-unit2').textContent='повт.';
+  resetBattle(); goTo('battle-screen');
+  showToast('⭐','Вызов принят!','Тебя ждёт Niletto. Удачи!');
+}
+
+// ==================== LEADERBOARD ====================
+function renderLeaderboard(){
+  ['Неделя','Месяц','Всё время','Уфа'].forEach((t,i)=>{
+    const el=document.createElement('div');el.className='lb-tab'+(i===0?' active':'');
+    el.textContent=t; el.onclick=function(){document.querySelectorAll('.lb-tab').forEach(x=>x.classList.remove('active'));this.classList.add('active');};
+    document.getElementById('lb-tabs').appendChild(el);
+  });
+  document.getElementById('lb-podium').innerHTML=leaderboardData.slice(0,3).map((l,i)=>`
+    <div class="podium-item">
+      <div class="podium-avatar" style="background:${i===0?'rgba(255,215,0,.15)':i===1?'rgba(170,170,170,.15)':'rgba(205,127,50,.15)'}">${l.emoji}</div>
+      <div class="podium-medal">${i===0?'🥇':i===1?'🥈':'🥉'}</div>
+      <div class="podium-name">${l.name.split(' ')[0]}</div>
+      <div class="podium-score">${l.points.toLocaleString('ru')}</div>
+      <div class="podium-block"></div>
+    </div>`).join('');
+  document.getElementById('lb-list').innerHTML=leaderboardData.slice(3).map(l=>`
+    <div class="lb-row ${l.me?'me':''}">
+      <div class="lb-rank">${l.rank}</div>
+      <div class="lb-avatar" style="background:var(--bg3)">${l.emoji}</div>
+      <div style="flex:1"><div class="lb-name">${l.name}${l.me?' (Ты)':''}</div><div class="lb-meta">${l.city}</div></div>
+      <div class="lb-points">${l.points.toLocaleString('ru')}</div>
+    </div>`).join('');
+}
+
+// ==================== PROFILE ====================
+function renderProfile(){
+  document.getElementById('achievements-grid').innerHTML=achievements.map(a=>`
+    <div class="achievement ${a.unlocked?'unlocked':'locked'}">
+      <div class="achievement-icon">${a.icon}</div>
+      <div class="achievement-name">${a.name}</div>
+    </div>`).join('');
+  document.getElementById('battle-history').innerHTML=battleHistory.map(b=>`
+    <div class="battle-card" style="padding:12px 14px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">${b.result==='win'?'🏆':'😔'}</span>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700">${b.activity}</div><div style="font-size:11px;color:var(--text2)">vs ${b.opponent} • ${b.date}</div></div>
+        <span style="font-size:15px;font-weight:800;color:${b.result==='win'?'var(--green)':'var(--red)'}">${b.amount}</span>
+      </div>
+    </div>`).join('');
+}
+
+// ==================== UTILS ====================
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function showToast(icon,title,sub){
+  document.querySelectorAll('.toast').forEach(t=>t.remove());
+  const t=document.createElement('div');t.className='toast';
+  t.innerHTML=`<div class="toast-icon">${icon}</div><div><div class="toast-text">${title}</div><div class="toast-sub">${sub}</div></div>`;
+  document.getElementById('app').appendChild(t);
+  setTimeout(()=>t.remove(),3200);
+}
+
+// ==================== INIT ====================
+renderCreateBattle();
+setTimeout(()=>{
+  const l=document.getElementById('loading');
+  l.style.transition='opacity .5s'; l.style.opacity='0';
+  setTimeout(()=>{l.style.display='none';goTo('onboarding');},500);
+},2200);
+</script>
+</body>
+</html>
